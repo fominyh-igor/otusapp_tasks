@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dosa-config
+data:
+  database.name: "users_db"
+  database.host: "postgresql"
+  database.port: "5432"

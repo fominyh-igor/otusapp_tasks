@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dosa-chart.fullname" $ }}-dp
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dosa-chart.selectorLabels" $ | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      name: dosa
+      labels:
+        {{- include "dosa-chart.selectorLabels" $ | nindent 8 }}
+    spec:
+      containers:
+        - name: dosa
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.port
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-secrets
+                  key: database.appUser.username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dosa-chart.fullname" $}}-postgresql
+                  key: password

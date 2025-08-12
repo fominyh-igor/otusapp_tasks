@@ -1,7 +1,7 @@
 FROM alpine:latest
 LABEL authors="i.fominykh"
 
-COPY health-service /usr/bin/health-service/
-RUN chmod +x /usr/bin/health-service/health-service
+COPY bin/dosa /usr/bin/dosa/
+RUN chmod +x /usr/bin/dosa/dosa
 
-ENTRYPOINT ["/usr/bin/health-service/health-service"]
+ENTRYPOINT ["/usr/bin/dosa/dosa"]

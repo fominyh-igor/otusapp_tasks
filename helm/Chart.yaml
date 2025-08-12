@@ -1,0 +1,12 @@
+apiVersion: v2
+name: dosa
+description: A Helm chart for dosa app with Postgres DB
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+
+dependencies:
+  - name: postgresql
+    version: "13.2.0"
+    repository: "@bitnami"
+    condition: postgresql.enabled

@@ -1,0 +1,77 @@
+{{- if .Values.dbInitJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "dosa-chart.fullname" $ }}-db-init-job
+  labels:
+    {{- include "dosa-chart.selectorLabels" $ | nindent 4 }}
+    component: database-migration
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "dosa-chart.selectorLabels" $ | nindent 8 }}
+        job: db-init
+    spec:
+      containers:
+        - name: dbinit
+          image: postgres:15-alpine
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.port
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-config
+                  key: database.name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dosa-chart.fullname" $ }}-secrets
+                  key: database.appUser.username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dosa-chart.fullname" $}}-postgresql
+                  key: password
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              # Ждем пока БД будет готова
+              until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER -d postgres; do
+                echo "Waiting for database..."
+                sleep 2
+              done
+
+              # Шаг 1: Создаем базу данных если не существует
+              echo "Creating database $DB_NAME if not exists..."
+              PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d postgres -v ON_ERROR_STOP=1 -c "
+              SELECT 'CREATE DATABASE $DB_NAME'
+              WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$DB_NAME')"
+
+              # Шаг 2: Подключаемся к созданной базе и создаем таблицы
+              echo "Creating tables in database $DB_NAME..."
+              PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -v ON_ERROR_STOP=1 -c "
+              CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"
+
+              echo "Database tables created successfully!"
+      restartPolicy: OnFailure
+  backoffLimit: {{ .Values.dbInitJob.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.dbInitJob.activeDeadlineSeconds }}
+{{- end }}

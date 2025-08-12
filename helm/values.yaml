@@ -1,0 +1,77 @@
+fullnameOverride: ""
+nameOverride: ""
+
+global:
+  postgresql:
+    auth:
+      database: "users_db"
+
+postgresql:
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+      accessModes:
+        - ReadWriteOnce
+      mountPath: /bitnami/postgresql
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 1001
+      runAsNonRoot: true
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+      runAsUser: 1001
+      runAsNonRoot: true
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  volumePermissions:
+    enabled: true
+
+image:
+  repository: docker.io/ifominykh/dosa
+  tag: "1.0.15"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  hosts:
+    - host: arch.homework
+      paths:
+        - path: /otusapp/ifominykh(/|$)(.*)
+          pathType: ImplementationSpecific
+
+config:
+  database:
+    name: users_db
+    host: postgresql
+    port: "5432"
+
+secret:
+  database:
+    appUser:
+      username: app_user
+    sa:
+      name: postgres
+
+dbInitJob:
+  enabled: true
+  backoffLimit: 3
+  activeDeadlineSeconds: 300

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dosa-dp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dosaLabel
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      name: dosa
+      labels:
+        app: dosaLabel
+    spec:
+      containers:
+        - name: dosa
+          image: docker.io/ifominykh/dosa:1.0.15
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: dosa-config
+                  key: database.host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dosa-config
+                  key: database.port
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: dosa-config
+                  key: database.name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: dosa-secrets
+                  key: database.appUser.username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql
+                  key: password
+      
